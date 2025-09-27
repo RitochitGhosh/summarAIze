@@ -13,7 +13,7 @@ export const user = pgTable("user", {
 export const session = pgTable("session", {
   id: text('id').primaryKey(),
   expiresAt: timestamp('expires_at').notNull(),
-  token: text('token').notNull().unique(),
+  token: text('token').notNull().unique(),  
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
   ipAddress: text('ip_address'),
@@ -45,3 +45,10 @@ export const verification = pgTable("verification", {
   createdAt: timestamp('created_at').$defaultFn(() => /* @__PURE__ */ new Date()),
   updatedAt: timestamp('updated_at').$defaultFn(() => /* @__PURE__ */ new Date())
 });
+
+export const schema = {
+  user,
+  session,
+  account,
+  verification,
+};
