@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { OctagonAlertIcon } from "lucide-react";
+import { FaGoogle, FaGithub } from "react-icons/fa";
 
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,24 @@ export const SignInView = () => {
             },
         );
     }
+
+    const onSocial = (provider: "google" | "github") => {
+        setError(null);
+        setPending(false);
+
+        authClient.signIn.social({
+            provider: provider,
+            callbackURL: "/"
+        }, {
+            onSuccess: () => {
+                setPending(false);
+            },
+            onError: ({ error }) => {
+                setPending(false);
+                setError(error.message);
+            }
+        })
+    };
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4">
@@ -148,16 +167,22 @@ export const SignInView = () => {
                                         variant={"outline"}
                                         type="button"
                                         className="w-full"
+                                        onClick={() => {
+                                            onSocial("google")
+                                        }}
                                     >
-                                        Google
+                                        <FaGoogle />
                                     </Button>
                                     <Button
                                         disabled={pending}
                                         variant={"outline"}
                                         type="button"
                                         className="w-full"
+                                        onClick={() => {
+                                            onSocial("github")
+                                        }}
                                     >
-                                        Github
+                                        <FaGithub />
                                     </Button>
                                 </div>
                                 <div className="text-center text-sm">
