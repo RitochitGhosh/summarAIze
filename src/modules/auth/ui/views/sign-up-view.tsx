@@ -241,11 +241,9 @@ export const SignUpView = () => {
                     </Form>
 
                     {/* Right side: gradient panel */}
-                    <div className="bg-radial from-green-700 to-green-800 hidden md:flex flex-col gap-y-4 items-center justify-center">
-                        <img src="/logo.svg" alt="Image" className="h-[92px] w-[92px]" />
-                        <p className="text-2xl font-semibold text-white">
-                            SummarAIze
-                        </p>
+                    <div className="bg-radial from-sidebar-accent to-sidebar hidden md:flex h-full flex-col gap-y-4 items-center justify-center rounded-r-2xl">
+                        <img src="/logo.svg" alt="Logo" className="h-[92px] w-[92px]" />
+                        <p className="text-2xl font-semibold text-white">SummarAIze</p>
                     </div>
                 </CardContent>
             </Card>
