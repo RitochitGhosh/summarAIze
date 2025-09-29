@@ -1,9 +1,11 @@
 "use client"
 
+import { useRouter } from "next/navigation";
+import { useSuspenseQuery } from "@tanstack/react-query";
+
 import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { columns } from "../components/columns";
 import { DataTable } from "../components/data-table";
 import { EmptyState } from "@/components/empty-state";
@@ -12,7 +14,9 @@ import { DataPagination } from "../components/data-pagination";
 
 
 export const AgentsView = () => {
+    const router = useRouter();
     const [filters, setFilters] = useAgentsFilters();
+
     const trpc = useTRPC();
     const { data } = useSuspenseQuery(trpc.agents.getMany.queryOptions({
         ...filters
@@ -20,7 +24,11 @@ export const AgentsView = () => {
 
     return (
         <div className="flex-1 pb-4 px-4 md:px-8 gap-y-4">
-            <DataTable data={data.items} columns={columns} />
+            <DataTable
+                data={data.items}
+                columns={columns}
+                onRowClick={(row) => router.push(`/agents/${row.id}`) } // Individual Agents
+            />
             <DataPagination
                 page={filters.page}
                 totalPages={data.totalPages}
@@ -41,7 +49,7 @@ export const AgentsViewLoading = () => {
         <LoadingState
             title="Loading Agents"
             description="This may take a few seconds"
-        /> 
+        />
     )
 }
 
@@ -49,7 +57,7 @@ export const AgentsViewError = () => {
     return (
         <ErrorState
             title="Error Loading Agents"
-            description="Something went wrong" 
+            description="Something went wrong"
         />
     )
 }
