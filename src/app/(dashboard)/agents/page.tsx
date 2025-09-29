@@ -4,21 +4,35 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import { AgentsView, AgentsViewError, AgentsViewLoading } from "@/modules/agents/ui/views/agents-view";
 import { getQueryClient, trpc } from "@/trpc/server";
+import { AgentsListHeaders } from "@/modules/agents/ui/components/agents-list-header";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 const Page = async () => {
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
+
+    if (!session) {
+        redirect("/sign-in");
+    }
+
     // This could have been done from the view section also but this approach of fetching in the server, makes it faster (preferrable)
     const queryClient = getQueryClient();
     void queryClient.prefetchQuery(trpc.agents.getMany.queryOptions());
 
     return (
-
-        <HydrationBoundary state={dehydrate(queryClient)}>
-            <Suspense fallback={<AgentsViewLoading />} >
-                <ErrorBoundary fallback={<AgentsViewError />} >
-                    <AgentsView />
-                </ErrorBoundary>
-            </Suspense>
-        </HydrationBoundary>
+        <>
+            <AgentsListHeaders />
+            <HydrationBoundary state={dehydrate(queryClient)}>
+                <Suspense fallback={<AgentsViewLoading />} >
+                    <ErrorBoundary fallback={<AgentsViewError />} >
+                        <AgentsView />
+                    </ErrorBoundary>
+                </Suspense>
+            </HydrationBoundary>
+        </>
     )
 }
 
