@@ -42,7 +42,7 @@ export const AgentForm = ({
             onSuccess: async () => {
                 // To refresh tjhe agents list view
                 await queryClient.invalidateQueries(
-                    trpc.agents.getMany.queryOptions()
+                    trpc.agents.getMany.queryOptions({})
                 );
 
                 if (initialValues?.id) {
