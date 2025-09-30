@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useState } from "react";
-import { UpdateAgentDialog, UpdateagentDialog } from "../components/update-agent-dialog";
+import { UpdateAgentDialog } from "../components/update-agent-dialog";
 
 interface IndividualAgentProps {
     agentId: string;
