@@ -7,10 +7,10 @@ import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
 import { useTRPC } from "@/trpc/client";
 import { columns } from "../components/columns";
-import { DataTable } from "../components/data-table";
 import { EmptyState } from "@/components/empty-state";
 import { useAgentsFilters } from "../../hooks/use-agents-filters";
 import { DataPagination } from "../components/data-pagination";
+import { DataTable } from "@/components/data-table";
 
 
 export const AgentsView = () => {
@@ -25,6 +25,7 @@ export const AgentsView = () => {
     return (
         <div className="flex-1 pb-4 px-4 md:px-8 gap-y-4">
             <DataTable
+                // Unsure of what type error it encountered, but copilot fixed it... 
                 data={data.items}
                 columns={columns}
                 onRowClick={(row) => router.push(`/agents/${row.id}`) } // Individual Agents
