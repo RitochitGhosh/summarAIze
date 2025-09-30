@@ -20,31 +20,26 @@ export const agentsRouter = createTRPCRouter({
         }))
         .query(async ({ ctx, input }) => {
             const { search, page, pageSize } = input;
+
+            const conditions = [eq(agents.userId, ctx.auth.user.id)];
+            if (search?.trim()) {
+                conditions.push(ilike(agents.name, `%${search.trim()}%`));
+            }
+
             const data = await db
                 .select({
-                    meetingCount: sql<number> `2`,
                     ...getTableColumns(agents)
                 })
                 .from(agents)
-                .where(
-                    and(
-                        eq(agents.userId, ctx.auth.user.id),
-                        search ? ilike(agents.name, `%${search}`) : undefined,
-                    )
-                )
+                .where(and(...conditions))
                 .orderBy(desc(agents.createdAt), desc(agents.id))
                 .limit(pageSize)
-                .offset((page - 1) * pageSize)
+                .offset((page - 1) * pageSize);
 
             const [total] = await db
                 .select({ count: count() })
                 .from(agents)
-                .where(
-                    and(
-                        eq(agents.userId, ctx.auth.user.id),
-                        search ? ilike(agents.name, `%${search}`) : undefined,
-                    )
-                )
+                .where(and(...conditions));
 
             const totalPages = Math.ceil(total.count / pageSize);
 
@@ -108,7 +103,7 @@ export const agentsRouter = createTRPCRouter({
                 )
                 .returning();
 
-                if (!updatedAgent) {
+            if (!updatedAgent) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "Agent not found" })
             }
 
