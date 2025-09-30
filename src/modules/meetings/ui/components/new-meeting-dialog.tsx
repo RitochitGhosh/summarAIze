@@ -28,7 +28,7 @@ export const NewMeetingDialog = ({
                     router.push(`/meetings/${id}`);
                 }}
                 onCancel={() => {
-                    onOpenChange
+                    onOpenChange(false)
                 }}
             />
         </ResponsiveDialog>
