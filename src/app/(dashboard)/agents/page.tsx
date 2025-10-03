@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import type { SearchParams } from "nuqs";
+import type { SearchParams } from "nuqs/server";
 
 import { AgentsView, AgentsViewError, AgentsViewLoading } from "@/modules/agents/ui/views/agents-view";
 import { getQueryClient, trpc } from "@/trpc/server";
