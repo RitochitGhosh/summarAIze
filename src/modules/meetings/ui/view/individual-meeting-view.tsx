@@ -15,6 +15,7 @@ import { useTRPC } from "@/trpc/client";
 import { toast } from "sonner";
 import { IndividualMeetingHeader } from "../components/individual-meeting-header";
 import { UpdateMeetingDialog } from "../components/update-meeting-dialog";
+import { CompletedState } from "@/components/completed-state";
 
 interface IndividualAgentProps {
     meetingId: string;
@@ -90,9 +91,7 @@ export const IndividualMeetingView = ({ meetingId }: IndividualAgentProps) => {
                     />
                 )}
                 {isCompleted && (
-                    <div className="">
-                        completetd
-                    </div>
+                    <CompletedState data={data} />
                 )}
                 {isProcessing && (
                    <ProcessingState />
