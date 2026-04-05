@@ -26,18 +26,18 @@ export async function transcribeWithElevenLabs(audioUrl: string): Promise<string
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) throw new Error("ELEVENLABS_API_KEY is not set");
 
+    const formData = new FormData();
+    formData.append("model_id", "scribe_v2");
+    formData.append("source_url", audioUrl);
+    formData.append("diarize", "true");
+    formData.append("timestamps_granularity", "word");
+
     const response = await fetch(`${ELEVENLABS_API_URL}/speech-to-text`, {
         method: "POST",
         headers: {
             "xi-api-key": apiKey,
-            "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-            audio_url: audioUrl,
-            model_id: "scribe_v1",
-            diarize: true,
-            timestamps_granularity: "word",
-        }),
+        body: formData,
     });
 
     if (!response.ok) {
@@ -52,7 +52,12 @@ export async function transcribeWithElevenLabs(audioUrl: string): Promise<string
     let currentSpeaker: string | undefined = undefined;
     let currentLine = "";
 
-    for (const word of data.words) {
+    for (const word of data.words ?? []) {
+        if (word.type === "spacing") {
+            currentLine += word.text;
+            continue;
+        }
+
         if (word.type !== "word" && word.type !== "punctuation") continue;
 
         const speaker = word.speaker_id ?? "Unknown";

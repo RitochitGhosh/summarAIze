@@ -37,7 +37,7 @@ export const CompletedState = ({ data }: Props) => {
     const trpc = useTRPC();
     const [question, setQuestion] = useState("");
     const [chatHistory, setChatHistory] = useState<
-        { role: "user" | "ai"; text: string }[]
+        { role: "user" | "ai"; text: string; sources?: { title: string; url: string }[] }[]
     >([]);
 
     const askAi = useMutation(
@@ -45,7 +45,7 @@ export const CompletedState = ({ data }: Props) => {
             onSuccess: (res) => {
                 setChatHistory((prev) => [
                     ...prev,
-                    { role: "ai", text: res.answer },
+                    { role: "ai", text: res.answer, sources: res.sources },
                 ]);
             },
             onError: (err) => {
@@ -57,9 +57,14 @@ export const CompletedState = ({ data }: Props) => {
     const handleAsk = () => {
         if (!question.trim()) return;
         const q = question.trim();
+        const nextHistory = [...chatHistory, { role: "user" as const, text: q }];
         setChatHistory((prev) => [...prev, { role: "user", text: q }]);
         setQuestion("");
-        askAi.mutate({ meetingId: data.id, question: q });
+        askAi.mutate({
+            meetingId: data.id,
+            question: q,
+            chatHistory: nextHistory.map(({ role, text }) => ({ role, text })),
+        });
     };
 
     return (
@@ -220,7 +225,7 @@ export const CompletedState = ({ data }: Props) => {
                             <BotIcon className="size-4 text-primary" />
                             <span className="font-medium text-sm">Ask AI about this meeting</span>
                             <Badge variant="secondary" className="ml-auto text-xs">
-                                Gemini
+                                OpenAI + Web
                             </Badge>
                         </div>
 
@@ -247,7 +252,27 @@ export const CompletedState = ({ data }: Props) => {
                                                     : "bg-muted text-foreground"
                                                     }`}
                                             >
-                                                {msg.text}
+                                                <div>{msg.text}</div>
+                                                {msg.role === "ai" && msg.sources && msg.sources.length > 0 && (
+                                                    <div className="mt-3 border-t border-border/60 pt-2">
+                                                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                                                            Sources
+                                                        </p>
+                                                        <div className="flex flex-col gap-y-1">
+                                                            {msg.sources.map((source) => (
+                                                                <a
+                                                                    key={source.url}
+                                                                    href={source.url}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="text-xs underline underline-offset-2 break-all"
+                                                                >
+                                                                    {source.title}
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

@@ -11,6 +11,13 @@ import { meetingsInsertSchema, meetingsUpdateSchema } from "../schemas";
 import { MeetingStatus } from "../types";
 import { streamVideo } from "@/lib/stream-video";
 import { generateAvatarUri } from "@/lib/avatar";
+import { searchWebWithGemini } from "@/lib/gemini-web-search";
+
+function shouldUseWebSearch(question: string, recentChatContext: string) {
+    const text = `${question}\n${recentChatContext}`.toLowerCase();
+
+    return /(latest|current|recent|today|news|web|online|live|happening|update|started|start|result|results|score|scores|schedule|ipl|stock|price|weather)/.test(text);
+}
 
 export const meetingsRouter = createTRPCRouter({
     generatetoken: protectedProcedure.mutation(async ({ ctx }) => {
@@ -158,7 +165,7 @@ export const meetingsRouter = createTRPCRouter({
                 .where(eq(agents.id, createdMeeting.agentId));
 
             if (!existingAgent) {
-                throw new TRPCError ({
+                throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Agent not found",
                 });
@@ -249,6 +256,10 @@ export const meetingsRouter = createTRPCRouter({
         .input(z.object({
             meetingId: z.string(),
             question: z.string().min(1).max(500),
+            chatHistory: z.array(z.object({
+                role: z.enum(["user", "ai"]),
+                text: z.string().min(1).max(4000),
+            })).max(12).default([]),
         }))
         .mutation(async ({ ctx, input }) => {
             const [meeting] = await db
@@ -288,24 +299,52 @@ export const meetingsRouter = createTRPCRouter({
                 .join("\n\n");
 
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const recentChatContext = input.chatHistory
+                .slice(-8)
+                .map((message) => `${message.role === "user" ? "User" : "Assistant"}: ${message.text}`)
+                .join("\n");
+            const forceWebSearch = Boolean(process.env.GEMINI_API_KEY) && shouldUseWebSearch(input.question, recentChatContext);
+
+            if (forceWebSearch) {
+                const searchResult = await searchWebWithGemini({
+                    question: input.question,
+                    meetingContext: context,
+                    chatContext: recentChatContext,
+                });
+
+                return {
+                    answer: searchResult.answer,
+                    sources: searchResult.sources,
+                };
+            }
+
+            const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+                {
+                    role: "system",
+                    content:
+                        "You are a helpful meeting assistant. Use the meeting context first. Answer directly and concisely. If the answer is not in the meeting context, say so plainly.",
+                },
+                {
+                    role: "user",
+                    content: [
+                        "Use this meeting context and recent chat history to answer the current question.",
+                        `Meeting context:\n${context}`,
+                        recentChatContext ? `Recent chat history:\n${recentChatContext}` : "",
+                        `Current question:\n${input.question}`,
+                    ]
+                        .filter(Boolean)
+                        .join("\n\n"),
+                },
+            ];
 
             const response = await openai.chat.completions.create({
                 model: "gpt-4o",
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            "You are a helpful meeting assistant. Answer questions concisely based only on the provided meeting context. If the answer is not in the context, say so.",
-                    },
-                    {
-                        role: "user",
-                        content: `Context:\n${context}\n\nQuestion: ${input.question}`,
-                    },
-                ],
+                messages,
             });
 
             return {
                 answer: response.choices[0].message.content ?? "No answer generated.",
+                sources: [],
             };
         }),
 })
