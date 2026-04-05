@@ -1,5 +1,6 @@
 import { and, count, desc, eq, getTableColumns, ilike, sql } from "drizzle-orm";
 import { z } from "zod";
+import OpenAI from "openai";
 
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_PAGE_SIZE } from "@/constants";
 import { db } from "@/db";
@@ -220,5 +221,91 @@ export const meetingsRouter = createTRPCRouter({
             }
 
             return removedMeeting;
-        })
+        }),
+
+    // Returns minimal meeting info (name + status) for any authenticated user.
+    // Used so invited participants can join a call without being the meeting owner.
+    getForCall: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .query(async ({ input }) => {
+            const [meeting] = await db
+                .select({
+                    id: meetings.id,
+                    name: meetings.name,
+                    status: meetings.status,
+                })
+                .from(meetings)
+                .where(eq(meetings.id, input.id));
+
+            if (!meeting) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Meeting not found" });
+            }
+
+            return meeting;
+        }),
+
+    // Ask a question about a completed meeting using its summary as context.
+    askAi: protectedProcedure
+        .input(z.object({
+            meetingId: z.string(),
+            question: z.string().min(1).max(500),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const [meeting] = await db
+                .select({
+                    id: meetings.id,
+                    name: meetings.name,
+                    summary: meetings.summary,
+                    elevenLabsTranscript: meetings.elevenLabsTranscript,
+                })
+                .from(meetings)
+                .where(
+                    and(
+                        eq(meetings.id, input.meetingId),
+                        eq(meetings.userId, ctx.auth.user.id),
+                    )
+                );
+
+            if (!meeting) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Meeting not found" });
+            }
+
+            if (!meeting.summary) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Meeting summary is not available yet.",
+                });
+            }
+
+            const context = [
+                `Meeting: ${meeting.name}`,
+                `Summary:\n${meeting.summary}`,
+                meeting.elevenLabsTranscript
+                    ? `Transcript:\n${meeting.elevenLabsTranscript}`
+                    : "",
+            ]
+                .filter(Boolean)
+                .join("\n\n");
+
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    {
+                        role: "system",
+                        content:
+                            "You are a helpful meeting assistant. Answer questions concisely based only on the provided meeting context. If the answer is not in the context, say so.",
+                    },
+                    {
+                        role: "user",
+                        content: `Context:\n${context}\n\nQuestion: ${input.question}`,
+                    },
+                ],
+            });
+
+            return {
+                answer: response.choices[0].message.content ?? "No answer generated.",
+            };
+        }),
 })

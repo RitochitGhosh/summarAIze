@@ -6,6 +6,7 @@ import { inngest } from "./client";
 import { StreamTranscriptItem } from "@/modules/meetings/types";
 import { db } from "@/db";
 import { agents, meetings, user } from "@/db/schema";
+import { transcribeWithElevenLabs } from "@/lib/elevenlabs";
 
 
 export const meetingsProcessing = inngest.createFunction(
@@ -117,6 +118,28 @@ export const meetingsProcessing = inngest.createFunction(
                     status: "completed",
                 })
                 .where(eq(meetings.id, event.data.meetingId));
+        });
+    },
+);
+
+export const meetingsElevenLabsTranscription = inngest.createFunction(
+    { id: "meetings/elevenlabs-transcription" },
+    { event: "meetings/elevenlabs-transcription" },
+    async ({ event, step }) => {
+        const { meetingId, recordingUrl } = event.data as {
+            meetingId: string;
+            recordingUrl: string;
+        };
+
+        const transcript = await step.run("elevenlabs-transcribe", async () => {
+            return transcribeWithElevenLabs(recordingUrl);
+        });
+
+        await step.run("save-elevenlabs-transcript", async () => {
+            await db
+                .update(meetings)
+                .set({ elevenLabsTranscript: transcript })
+                .where(eq(meetings.id, meetingId));
         });
     },
 );

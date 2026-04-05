@@ -152,13 +152,23 @@ export async function POST(req: NextRequest) {
         const event = payload as CallRecordingReadyEvent;
         const meetingId = event.call_cid.split(":")[1];
 
-        await db
+        const [updatedRecordingMeeting] = await db
             .update(meetings)
             .set({
                 recordingUrl: event.call_recording.url,
             })
-            .where(eq(meetings.id, meetingId));
+            .where(eq(meetings.id, meetingId))
+            .returning();
 
+        if (updatedRecordingMeeting?.recordingUrl) {
+            await inngest.send({
+                name: "meetings/elevenlabs-transcription",
+                data: {
+                    meetingId: updatedRecordingMeeting.id,
+                    recordingUrl: updatedRecordingMeeting.recordingUrl,
+                },
+            });
+        }
     }
 
     return NextResponse.json({ status: "ok" });

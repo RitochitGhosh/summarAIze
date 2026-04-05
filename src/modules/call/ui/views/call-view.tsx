@@ -11,7 +11,9 @@ interface Props {
 
 export const CallView = ({ meetingId }: Props) => {
     const trpc = useTRPC();
-    const { data } = useSuspenseQuery(trpc.meetings.getOne.queryOptions({ id: meetingId }));
+    // Use getForCall so any authenticated participant (not just the owner)
+    // can join via a shared link.
+    const { data } = useSuspenseQuery(trpc.meetings.getForCall.queryOptions({ id: meetingId }));
 
     if (data.status === "completed") {
         return (
